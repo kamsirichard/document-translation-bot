@@ -99,5 +99,12 @@ body {
 #app .file-input-box .wrapper-file-section .selected-files .file-list .item .remove:hover {
   color: #e74c3c;
 }
+.language-selection, .output-format-selection {
+  margin-top: 20px;
+}
+
+.language-selection select, .output-format-selection input {
+  margin-right: 10px;
+}
 
 /*# sourceMappingURL=style.css.map */

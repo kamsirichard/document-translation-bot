@@ -1,14 +1,56 @@
-from flask import Flask, request, render_template, send_file, jsonify
 import os
-import requests
+from flask import Flask, render_template, request, send_file, jsonify
 from werkzeug.utils import secure_filename
+from langdetect import detect
+from googletrans import Translator
+from docx import Document
+import pdfkit
+from PyPDF2 import PdfReader
+import pytesseract
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads/'
 
-# Ensure the upload folder exists
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
+UPLOAD_FOLDER = 'uploads'
+OUTPUT_FOLDER = 'output'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
+
+translator = Translator()
+
+def save_file(file):
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(file_path)
+    return file_path
+
+def detect_language(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        text = file.read()
+    return detect(text)
+
+def translate_text(text, target_language):
+    translated = translator.translate(text, dest=target_language)
+    return translated.text
+
+def save_as_docx(text, filename):
+    doc = Document()
+    doc.add_paragraph(text)
+    doc_path = os.path.join(app.config['OUTPUT_FOLDER'], f"{filename}.docx")
+    doc.save(doc_path)
+    return doc_path
+
+def save_as_txt(text, filename):
+    txt_path = os.path.join(app.config['OUTPUT_FOLDER'], f"{filename}.txt")
+    with open(txt_path, 'w', encoding='utf-8') as file:
+        file.write(text)
+    return txt_path
+
+def save_as_pdf(html, filename):
+    pdf_path = os.path.join(app.config['OUTPUT_FOLDER'], f"{filename}.pdf")
+    pdfkit.from_string(html, pdf_path)
+    return pdf_path
 
 @app.route('/')
 def index():
@@ -16,54 +58,51 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'document' not in request.files:
-        return "No file part", 400
-
-    file = request.files['document']
-    if file.filename == '':
-        return "No selected file", 400
-
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-
+    files = request.files.getlist('document')
     target_language = request.form['language']
+    output_format = request.form['format']
+    
+    processed_files = []
 
-    try:
-        translated_file = translate_document(filepath, target_language)
-        return send_file(translated_file, as_attachment=True)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if not os.path.exists(app.config['OUTPUT_FOLDER']):
+        os.makedirs(app.config['OUTPUT_FOLDER'])
 
-def translate_document(filepath, target_language):
-    with open(filepath, 'r', encoding='utf-8') as file:
-        text = file.read()
+    for file in files:
+        file_path = save_file(file)
 
-    # Call translation API
-    translated_text = translate_text(text, target_language)
+        # Detect the language
+        detected_language = detect_language(file_path)
 
-    # Save translated text to a new file
-    translated_filepath = f"{filepath}_translated.txt"
-    with open(translated_filepath, 'w', encoding='utf-8') as file:
-        file.write(translated_text)
+        # Read file content
+        if file_path.endswith('.txt'):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        elif file_path.endswith('.docx'):
+            doc = Document(file_path)
+            content = "\n".join([para.text for para in doc.paragraphs])
+        elif file_path.endswith('.pdf'):
+            reader = PdfReader(file_path)
+            content = ""
+            for page in reader.pages:
+                content += page.extract_text()
+        else:
+            content = pytesseract.image_to_string(file_path)
 
-    return translated_filepath
+        # Translate the content
+        translated_text = translate_text(content, target_language)
 
-def translate_text(text, target_language):
-    api_key = os.getenv('TRANSLATION_API_KEY')
-    url = "https://translation-api.example.com/translate"  # Replace with actual API URL
-    data = {
-        'q': text,
-        'target': target_language,
-        'key': api_key
-    }
-    response = requests.post(url, data=data)
-
-    if response.status_code != 200:
-        raise Exception(f"Translation API request failed with status code {response.status_code}")
-
-    result = response.json()
-    return result.get('translatedText', '')
+        # Save the translated content in the desired format
+        filename = os.path.splitext(os.path.basename(file_path))[0]
+        if output_format == 'doc':
+            output_file_path = save_as_docx(translated_text, filename)
+        elif output_format == 'txt':
+            output_file_path = save_as_txt(translated_text, filename)
+        elif output_format == 'pdf':
+            output_file_path = save_as_pdf(translated_text, filename)
+        
+        processed_files.append(output_file_path)
+    
+    return send_file(processed_files[0], as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)

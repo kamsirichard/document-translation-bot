@@ -12,10 +12,11 @@
     <div id="app">
         <h2>Upload Files</h2>
         <div class="container">
-            <div class="file-input-box">
+            <div class="file-input-box"  method="post" enctype="multipart/form-data">
                 <div class="wrapper-file-input">
                     <div class="input-box" @click="openFileInput">
-                        <h4>
+
+                        <h4 >
                             <i class="fa-solid fa-upload"></i>
                             Choose File to upload
                         </h4>
@@ -56,6 +57,35 @@
                         </ul>
                     </div>
                 </div>
+                
+                <!-- Language Selection -->
+                <div class="language-selection">
+                    <h5>Select Target Language</h5>
+                    <select v-model="targetLanguage">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <!-- Add more languages as needed -->
+                    </select>
+                </div>
+
+                <!-- Output Format Selection -->
+                <div class="output-format-selection">
+                    <h5>Select Output Format</h5>
+                    <div>
+                        <input type="radio" id="pdf" value="pdf" v-model="outputFormat">
+                        <label for="pdf">PDF</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="txt" value="txt" v-model="outputFormat">
+                        <label for="txt">TXT</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="doc" value="doc" v-model="outputFormat">
+                        <label for="doc">DOC</label>
+                    </div>
+                </div>
+
             </div>
         </div>
 

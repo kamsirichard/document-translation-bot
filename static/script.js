@@ -4,6 +4,8 @@ new Vue({
     return {
       selectedFileNames: [],
       selectedFiles: [], // Store the actual file objects
+      selectedLanguage: 'en', // Default language
+      selectedFormat: 'txt'   // Default format
     };
   },
   methods: {
@@ -43,7 +45,8 @@ new Vue({
       for (let i = 0; i < this.selectedFiles.length; i++) {
         formData.append('document', this.selectedFiles[i]);
       }
-      formData.append('language', 'en'); // Example: hardcoded language, you can make it dynamic
+      formData.append('language', this.selectedLanguage);
+      formData.append('format', this.selectedFormat);
 
       fetch('/upload', {
         method: 'POST',
@@ -54,7 +57,7 @@ new Vue({
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'translated_file.txt'; // This can be dynamic based on the actual filename
+          a.download = 'translated_file.' + this.selectedFormat; // This will use the selected format
           document.body.appendChild(a);
           a.click();
           a.remove();

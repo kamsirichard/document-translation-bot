@@ -120,3 +120,11 @@ body {
     }
   }
 }
+
+.language-selection, .output-format-selection {
+  margin-top: 20px;
+}
+
+.language-selection select, .output-format-selection input {
+  margin-right: 10px;
+}
