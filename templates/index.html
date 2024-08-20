@@ -11,21 +11,15 @@
 <body>
     <div id="app">
         <h2>Upload Files</h2>
+        <form method="post" enctype="multipart/form-data">
         <div class="container">
             <div class="file-input-box"  method="post" enctype="multipart/form-data">
                 <div class="wrapper-file-input">
                     <div class="input-box" @click="openFileInput">
-
-                        <h4 >
-                            <i class="fa-solid fa-upload"></i>
-                            Choose File to upload
-                        </h4>
-                        <input
-                            ref="fileInput"
-                            type="file"
-                            hidden
-                            @change="handleFileChange"
-                            multiple
+                       
+                       
+                        <input class="fa-solid fa-upload"
+                        id="file" name="file" type="file" @change="handleFileChange"  multiple 
                         />
                     </div>
                     <small>Files Supported: PDF, TEXT, DOC, DOCX, JPG, PNG, SVG</small>
@@ -87,8 +81,9 @@
                 </div>
 
             </div>
+           
         </div>
-
+        </form>
         <button @click="uploadFiles">Upload and Translate</button>
     </div>
     <script src="/static/script.js"></script>
