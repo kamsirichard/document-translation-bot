@@ -1,5 +1,6 @@
 new Vue({
   el: '#app',
+  delimiters: ['[[', ']]'], // Custom delimiters to avoid conflict with Jinja2
   data() {
     return {
       selectedFileNames: [],

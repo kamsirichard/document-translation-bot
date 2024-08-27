@@ -1,21 +1,30 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, send_file, jsonify
 from werkzeug.utils import secure_filename
 from langdetect import detect
-from googletrans import Translator
+from google.cloud import translate_v2 as translate
 from docx import Document
 import pdfkit
 from PyPDF2 import PdfReader
 import pytesseract
 
 app = Flask(__name__)
+load_dotenv()
+
 
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'output'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 
-translator = Translator()
+# Load credentials from environment variables
+credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+if credentials_path is None:
+    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
+
+# Initialize the Google Translator client
+translate_client = translate.Client.from_service_account_json(credentials_path)
 
 def save_file(file):
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -31,8 +40,8 @@ def detect_language(file_path):
     return detect(text)
 
 def translate_text(text, target_language):
-    translated = translator.translate(text, dest=target_language)
-    return translated.text
+    translated = translate_client.translate(text, target_language)
+    return translated['translatedText']
 
 def save_as_docx(text, filename):
     doc = Document()

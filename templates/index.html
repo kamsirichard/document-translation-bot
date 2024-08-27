@@ -25,33 +25,7 @@
                     <small>Files Supported: PDF, TEXT, DOC, DOCX, JPG, PNG, SVG</small>
                 </div>
 
-                <div class="wrapper-file-section">
-                    <div class="selected-files" v-if="selectedFileNames.length">
-                        <h5>Selected Files</h5>
-                        <ul
-                            class="file-list"
-                            :style="
-                                selectedFileNames.length ? 'max-height:220px' : 'height:auto'
-                            "
-                        >
-                            <transition-group name="fade" class="selected-files">
-                                <li
-                                    class="item"
-                                    v-for="(file, index) in selectedFileNames"
-                                    :key="file.name"
-                                >
-                                    <span class="name">
-                                        [[ file.name ]] ([[ formatFileSize(file.size) ]])
-                                    </span>
-                                    <div class="remove" @click="removeFile(index)">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </div>
-                                </li>
-                            </transition-group>
-                        </ul>
-                    </div>
-                </div>
-                
+               
                 <!-- Language Selection -->
                 <div class="language-selection">
                     <h5>Select Target Language</h5>
