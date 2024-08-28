@@ -1,76 +1,71 @@
-document.addEventListener('DOMContentLoaded', function () {
-  const app = Vue.createApp({
-    data() {
-      return {
-        selectedFileNames: [],
-        selectedFiles: [], // Store the actual file objects
-        selectedLanguage: 'en', // Default language
-        selectedFormat: 'txt'   // Default format
-      };
+const app = Vue.createApp({
+  data() {
+    return {
+      selectedFileNames: [],
+      selectedFiles: [],
+      selectedLanguage: 'en',
+      selectedFormat: 'txt'
+    };
+  },
+  methods: {
+    openFileInput() {
+      this.$refs.fileInput.click();
     },
-    methods: {
-      openFileInput() {
-        this.$refs.fileInput.click(); // Use ref to access the input element
-      },
-      handleFileChange(event) {
-        const fileList = event.target.files;
-        this.selectedFileNames = [];
-        this.selectedFiles = [];
+    handleFileChange(event) {
+      const fileList = event.target.files;
+      this.selectedFileNames = [];
+      this.selectedFiles = [];
 
-        for (let i = 0; i < fileList.length; i++) {
-          this.selectedFileNames.push({
-            name: fileList[i].name,
-            size: fileList[i].size
-          });
-          this.selectedFiles.push(fileList[i]); // Save the file object
-        }
-      },
-      formatFileSize(size) {
-        const units = ["B", "KB", "MB", "GB"];
-        let index = 0;
-
-        while (size >= 1024 && index < units.length - 1) {
-          size /= 1024;
-          index++;
-        }
-
-        return `${size.toFixed(2)} ${units[index]}`;
-      },
-      removeFile(index) {
-        this.selectedFileNames.splice(index, 1);
-        this.selectedFiles.splice(index, 1);
-      },
-      uploadFiles() {
-        const formData = new FormData();
-        for (let i = 0; i < this.selectedFiles.length; i++) {
-          formData.append('document', this.selectedFiles[i]);
-        }
-        formData.append('language', this.selectedLanguage);
-        formData.append('format', this.selectedFormat);
-
-        console.log('Uploading files...'); // Debugging line
-
-        fetch('/upload', {
-          method: 'POST',
-          body: formData,
-        })
-          .then(response => response.blob())
-          .then(blob => {
-            console.log('Received response:', blob); // Debugging line
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'translated_file.' + this.selectedFormat; // This will use the selected format
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-          })
-          .catch(error => {
-            console.error('Error:', error);
-          });
+      for (let i = 0; i < fileList.length; i++) {
+        this.selectedFileNames.push({
+          name: fileList[i].name,
+          size: fileList[i].size
+        });
+        this.selectedFiles.push(fileList[i]);
       }
-    }
-  });
+    },
+    formatFileSize(size) {
+      const units = ["B", "KB", "MB", "GB"];
+      let index = 0;
 
-  app.mount('#app');
+      while (size >= 1024 && index < units.length - 1) {
+        size /= 1024;
+        index++;
+      }
+
+      return `${size.toFixed(2)} ${units[index]}`;
+    },
+    removeFile(index) {
+      this.selectedFileNames.splice(index, 1);
+      this.selectedFiles.splice(index, 1);
+    },
+    uploadFiles() {
+      const formData = new FormData();
+      for (let i = 0; i < this.selectedFiles.length; i++) {
+        formData.append('document', this.selectedFiles[i]);
+      }
+      formData.append('language', this.selectedLanguage);
+      formData.append('format', this.selectedFormat);
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData,
+      })
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'translated_file.' + this.selectedFormat;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+  }
 });
+
+app.mount('#app');
