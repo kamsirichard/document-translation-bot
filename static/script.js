@@ -1,71 +1,76 @@
-new Vue({
-  el: '#app',
-  delimiters: ['[[', ']]'], // Custom delimiters to avoid conflict with Jinja2
-  data() {
-    return {
-      selectedFileNames: [],
-      selectedFiles: [], // Store the actual file objects
-      selectedLanguage: 'en', // Default language
-      selectedFormat: 'txt'   // Default format
-    };
-  },
-  methods: {
-    openFileInput() {
-      this.$refs.fileInput.click();
+document.addEventListener('DOMContentLoaded', function () {
+  const app = Vue.createApp({
+    data() {
+      return {
+        selectedFileNames: [],
+        selectedFiles: [], // Store the actual file objects
+        selectedLanguage: 'en', // Default language
+        selectedFormat: 'txt'   // Default format
+      };
     },
-    handleFileChange(event) {
-      const fileList = event.target.files;
-      this.selectedFileNames = [];
-      this.selectedFiles = [];
+    methods: {
+      openFileInput() {
+        this.$refs.fileInput.click(); // Use ref to access the input element
+      },
+      handleFileChange(event) {
+        const fileList = event.target.files;
+        this.selectedFileNames = [];
+        this.selectedFiles = [];
 
-      for (let i = 0; i < fileList.length; i++) {
-        this.selectedFileNames.push({
-          name: fileList[i].name,
-          size: fileList[i].size
-        });
-        this.selectedFiles.push(fileList[i]); // Save the file object
-      }
-    },
-    formatFileSize(size) {
-      const units = ["B", "KB", "MB", "GB"];
-      let index = 0;
+        for (let i = 0; i < fileList.length; i++) {
+          this.selectedFileNames.push({
+            name: fileList[i].name,
+            size: fileList[i].size
+          });
+          this.selectedFiles.push(fileList[i]); // Save the file object
+        }
+      },
+      formatFileSize(size) {
+        const units = ["B", "KB", "MB", "GB"];
+        let index = 0;
 
-      while (size >= 1024 && index < units.length - 1) {
-        size /= 1024;
-        index++;
-      }
+        while (size >= 1024 && index < units.length - 1) {
+          size /= 1024;
+          index++;
+        }
 
-      return `${size.toFixed(2)} ${units[index]}`;
-    },
-    removeFile(index) {
-      this.selectedFileNames.splice(index, 1);
-      this.selectedFiles.splice(index, 1);
-    },
-    uploadFiles() {
-      const formData = new FormData();
-      for (let i = 0; i < this.selectedFiles.length; i++) {
-        formData.append('document', this.selectedFiles[i]);
-      }
-      formData.append('language', this.selectedLanguage);
-      formData.append('format', this.selectedFormat);
+        return `${size.toFixed(2)} ${units[index]}`;
+      },
+      removeFile(index) {
+        this.selectedFileNames.splice(index, 1);
+        this.selectedFiles.splice(index, 1);
+      },
+      uploadFiles() {
+        const formData = new FormData();
+        for (let i = 0; i < this.selectedFiles.length; i++) {
+          formData.append('document', this.selectedFiles[i]);
+        }
+        formData.append('language', this.selectedLanguage);
+        formData.append('format', this.selectedFormat);
 
-      fetch('/upload', {
-        method: 'POST',
-        body: formData,
-      })
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'translated_file.' + this.selectedFormat; // This will use the selected format
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
+        console.log('Uploading files...'); // Debugging line
+
+        fetch('/upload', {
+          method: 'POST',
+          body: formData,
         })
-        .catch(error => {
-          console.error('Error:', error);
-        });
+          .then(response => response.blob())
+          .then(blob => {
+            console.log('Received response:', blob); // Debugging line
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'translated_file.' + this.selectedFormat; // This will use the selected format
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      }
     }
-  }
+  });
+
+  app.mount('#app');
 });

@@ -12,7 +12,6 @@ import pytesseract
 app = Flask(__name__)
 load_dotenv()
 
-
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'output'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -25,6 +24,10 @@ if credentials_path is None:
 
 # Initialize the Google Translator client
 translate_client = translate.Client.from_service_account_json(credentials_path)
+
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'jpg', 'png', 'svg'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_file(file):
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -71,47 +74,54 @@ def upload_file():
     target_language = request.form['language']
     output_format = request.form['format']
     
+    if not files:
+        return jsonify({'error': 'No files uploaded'}), 400
+
+    if not target_language or not output_format:
+        return jsonify({'error': 'Language or format not specified'}), 400
+
     processed_files = []
 
-    if not os.path.exists(app.config['OUTPUT_FOLDER']):
-        os.makedirs(app.config['OUTPUT_FOLDER'])
-
     for file in files:
-        file_path = save_file(file)
+        if file and allowed_file(file.filename):
+            file_path = save_file(file)
 
-        # Detect the language
-        detected_language = detect_language(file_path)
+            # Read file content
+            if file_path.endswith('.txt'):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            elif file_path.endswith('.docx'):
+                doc = Document(file_path)
+                content = "\n".join([para.text for para in doc.paragraphs])
+            elif file_path.endswith('.pdf'):
+                reader = PdfReader(file_path)
+                content = ""
+                for page in reader.pages:
+                    content += page.extract_text()
+            else:
+                content = pytesseract.image_to_string(file_path)
 
-        # Read file content
-        if file_path.endswith('.txt'):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-        elif file_path.endswith('.docx'):
-            doc = Document(file_path)
-            content = "\n".join([para.text for para in doc.paragraphs])
-        elif file_path.endswith('.pdf'):
-            reader = PdfReader(file_path)
-            content = ""
-            for page in reader.pages:
-                content += page.extract_text()
-        else:
-            content = pytesseract.image_to_string(file_path)
+            # Detect the language
+            detected_language = detect_language(file_path)
 
-        # Translate the content
-        translated_text = translate_text(content, target_language)
+            # Translate the content
+            translated_text = translate_text(content, target_language)
 
-        # Save the translated content in the desired format
-        filename = os.path.splitext(os.path.basename(file_path))[0]
-        if output_format == 'doc':
-            output_file_path = save_as_docx(translated_text, filename)
-        elif output_format == 'txt':
-            output_file_path = save_as_txt(translated_text, filename)
-        elif output_format == 'pdf':
-            output_file_path = save_as_pdf(translated_text, filename)
-        
-        processed_files.append(output_file_path)
+            # Save the translated content in the desired format
+            filename = os.path.splitext(os.path.basename(file_path))[0]
+            if output_format == 'doc':
+                output_file_path = save_as_docx(translated_text, filename)
+            elif output_format == 'txt':
+                output_file_path = save_as_txt(translated_text, filename)
+            elif output_format == 'pdf':
+                output_file_path = save_as_pdf(translated_text, filename)
+            
+            processed_files.append(output_file_path)
     
-    return send_file(processed_files[0], as_attachment=True)
+    if processed_files:
+        return send_file(processed_files[0], as_attachment=True)
+    else:
+        return jsonify({'error': 'No valid files to process'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
