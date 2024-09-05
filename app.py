@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file
 from werkzeug.utils import secure_filename
 from langdetect import detect
 from google.cloud import translate_v2 as translate
@@ -57,9 +57,23 @@ def extract_text_from_docx(file_path):
         text.append(para.text)
     return '\n'.join(text)
 
+def extract_text_from_pdf(file_path):
+    reader = PdfReader(file_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
+
 def translate_text(text, target_language):
-    translated = translate_client.translate(text, target_language)
-    return translated['translatedText']
+    max_chars_per_request = 100000
+    translated_text = ""
+
+    for i in range(0, len(text), max_chars_per_request):
+        chunk = text[i:i + max_chars_per_request]
+        translated = translate_client.translate(chunk, target_language)
+        translated_text += translated['translatedText'] + " "
+
+    return translated_text.strip()
 
 def save_as_docx(text, filename):
     doc = Document()
@@ -97,24 +111,18 @@ def upload_file():
     for file in files:
         file_path = save_file(file)
 
-        # Read file content
         if file_path.endswith('.txt'):
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
         elif file_path.endswith('.docx'):
             content = extract_text_from_docx(file_path)
         elif file_path.endswith('.pdf'):
-            reader = PdfReader(file_path)
-            content = ""
-            for page in reader.pages:
-                content += page.extract_text()
+            content = extract_text_from_pdf(file_path)
         else:
             content = pytesseract.image_to_string(file_path)
 
-        # Translate the content
         translated_text = translate_text(content, target_language)
 
-        # Save the translated content in the desired format
         filename = os.path.splitext(os.path.basename(file_path))[0]
         if output_format == 'doc':
             output_file_path = save_as_docx(translated_text, filename)
@@ -125,8 +133,8 @@ def upload_file():
         
         processed_files.append(output_file_path)
     
-    # Return the first file in the list for download
     return send_file(processed_files[0], as_attachment=True)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Vercel handler
+def handler(event, context):
+    return app(event, context)
